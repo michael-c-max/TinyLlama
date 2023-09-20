@@ -56,4 +56,4 @@ model = LlamaForCausalLM.from_pretrained("TinyLlama/bytellama-320M-step-5000").t
 
 prompt_id = tokenizer.encode(prompt).unsqueeze(0).to("cuda")
 out = model.generate(prompt_id, max_length=1000, do_sample=True, num_return_sequences=1)
-import pdb; pdb.set_trace() 
+print(tokenizer.decode(out[0]))
