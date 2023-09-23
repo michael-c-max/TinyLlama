@@ -122,6 +122,7 @@ def copy_weights_llama(
     state_dict: Dict[str, torch.Tensor],
     lit_weights: Dict[str, Union[torch.Tensor, NotYetLoadedTensor]],
     saver: Optional[incremental_save] = None,
+    bytellama = False
 ):
     weight_map = {
         "transformer.wte.weight": "model.embed_tokens.weight",
@@ -161,6 +162,11 @@ def copy_weights_llama(
         else:
             to_name = weight_map[name]
             param = load_param(param, name, None)
+            ### check if wte or lm_head
+            ### for bytellama, we need to shift the embedding 3 position to follow ByT5Tokenizer
+            if (name == "transformer.wte.weight" or name == "lm_head.weight") and bytellama:
+                ### shift the special token to the front
+                param = torch.cat((param[256:259], param[:256],param[259:] ), dim=0)
             if saver is not None:
                 param = saver.store_early(param)
             state_dict[to_name] = param
@@ -229,7 +235,7 @@ def check_conversion_supported(lit_weights: Dict[str, torch.Tensor]) -> None:
 
 
 @torch.inference_mode()
-def convert_lit_checkpoint(*, checkpoint_name: str, out_dir: Path, model_name: str) -> None:
+def convert_lit_checkpoint(*, checkpoint_name: str, out_dir: Path, model_name: str, bytellama=False) -> None:
     config = Config.from_name(model_name)
 
     if "falcon" in model_name:
@@ -253,7 +259,7 @@ def convert_lit_checkpoint(*, checkpoint_name: str, out_dir: Path, model_name: s
             lit_weights = maybe_unwrap_state_dict(lit_weights)
             check_conversion_supported(lit_weights)
             # Incremental save will trigger error
-            copy_fn(sd, lit_weights, saver=None)
+            copy_fn(sd, lit_weights, saver=None, bytellama=bytellama)
             gc.collect()
         saver.save(sd)
 

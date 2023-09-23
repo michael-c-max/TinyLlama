@@ -21,22 +21,37 @@ from lit_gpt.utils import chunked_cross_entropy, get_default_supported_precision
 from pytorch_lightning.loggers import WandbLogger
 from lit_gpt import FusedCrossEntropyLoss
 import numpy as np
-model_name = "bytellama_320M"
-name = "bytellama_320M"
+# model_name = "bytellama_320M"
+# name = "bytellama_320M"
+# out_dir = Path("out") / name
+
+# # Hyperparameters
+# num_of_devices = 6
+# global_batch_size = 252
+# learning_rate = 4e-4
+# micro_batch_size = 3
+# max_step = 15000
+# warmup_steps = 200
+# log_step_interval = 1
+# eval_iters = 100
+# save_step_interval = 5000
+# eval_step_interval = 5000
+
+model_name = "bytellama_16384"
+name = "bytellama_16384"
 out_dir = Path("out") / name
 
 # Hyperparameters
 num_of_devices = 6
-global_batch_size = 252
+global_batch_size = 180
 learning_rate = 4e-4
-micro_batch_size = 3
+micro_batch_size = 2
 max_step = 10000
 warmup_steps = 200
 log_step_interval = 1
 eval_iters = 100
 save_step_interval = 5000
 eval_step_interval = 5000
-
 
 weight_decay = 1e-1
 beta1 = 0.9

@@ -318,6 +318,24 @@ tiny_LLaMA = [
         intermediate_size=3072,
         n_query_groups=16,
     ),
+    dict(
+        org="StatNLP-research",
+        name="bytellama_16384",
+        block_size=16384,
+        vocab_size=258,
+        padding_multiple=64,
+        n_layer=18,
+        n_head=16,
+        n_embd=1024,
+        rotary_percentage=1.0,
+        parallel_residual=False,
+        bias=False,
+        _norm_class="FusedRMSNorm",
+        norm_eps=1e-5,
+        _mlp_class="LLaMAMLP",
+        intermediate_size=3072,
+        n_query_groups=16,
+    ),
 ]
 configs.extend(tiny_LLaMA)
 
