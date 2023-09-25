@@ -29,7 +29,7 @@ class GPT(nn.Module):
         self.transformer = nn.ModuleDict(
             dict(
                 wte=nn.Embedding(config.padded_vocab_size, config.n_embd),
-                h=nn.ModuleList(Block(config) for _ in range(config.n_layer)),
+                h=nn.ModuleList(Block(config, _) for _ in range(config.n_layer)),
                 ln_f=config.norm_class(config.n_embd, eps=config.norm_eps),
             )
         )
@@ -147,8 +147,21 @@ class GPT(nn.Module):
         ]
 
 
+class DownOrUpSampleLayer(nn.Module):
+    def __init__(self, ratio):
+        super().__init__()
+        self.ratio = ratio
+
+    def forward(self, x):
+        #downsample
+        if self.ratio < 0:
+            x = x.view(x.shape[0], -1, -self.ratio, x.shape[-1]).mean(dim=2)
+        else:
+            x = torch.repeat_interleave(x, self.ratio, dim=1)
+        return x
+
 class Block(nn.Module):
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, layer_num:int) -> None:
         super().__init__()
         self.norm_1 = config.norm_class(config.n_embd, eps=config.norm_eps)
         self.attn = CausalSelfAttention(config)
@@ -156,6 +169,14 @@ class Block(nn.Module):
             self.norm_2 = config.norm_class(config.n_embd, eps=config.norm_eps)
         self.mlp = config.mlp_class(config)
         self.config = config
+        self.layer_num = layer_num
+        self.down_or_up_sample_layer = None
+        if self.config.down_or_up_sample_layer and self.layer_num in self.config.down_or_up_sample_layer:
+            ratio = self.config.down_or_up_sample_ratio[self.config.down_or_up_sample_layer.index(layer_num)] 
+            self.down_or_up_sample_layer = DownOrUpSampleLayer(ratio)
+            
+            
+            
     def forward(
         self,
         x: torch.Tensor,
@@ -165,6 +186,11 @@ class Block(nn.Module):
         input_pos: Optional[torch.Tensor] = None,
         kv_cache: Optional[KVCache] = None,
     ) -> Tuple[torch.Tensor, Optional[KVCache]]:
+        
+        if self.down_or_up_sample_layer:
+            x = self.down_or_up_sample_layer(x)
+            
+            
         n_1 = self.norm_1(x)
         h, new_kv_cache = self.attn(n_1, rope, max_seq_length, mask, input_pos, kv_cache)
         if self.config.parallel_residual:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Type
+from typing import Any, Literal, Optional, Type, List
 
 import torch
 from typing_extensions import Self
@@ -22,6 +22,8 @@ class Config:
     rotary_percentage: float = 0.25
     parallel_residual: bool = True
     bias: bool = True
+    down_or_up_sample_layer: Optional[List] = None
+    down_or_up_sample_ratio: Optional[List] = None
     # to use multi-head attention (MHA), set this to `n_head` (default)
     # to use multi-query attention (MQA), set this to 1
     # to use grouped-query attention (GQA), set this to a value in between
@@ -320,7 +322,7 @@ tiny_LLaMA = [
     ),
     dict(
         org="StatNLP-research",
-        name="bytellama_16384",
+        name="bytellama_230M_16384",
         block_size=16384,
         vocab_size=258,
         padding_multiple=64,
@@ -335,6 +337,67 @@ tiny_LLaMA = [
         _mlp_class="LLaMAMLP",
         intermediate_size=3072,
         n_query_groups=16,
+    ),
+    dict(
+        org="StatNLP-research",
+        name="bytellama_240M_16384_HourGlass",
+        block_size=16384,
+        vocab_size=258,
+        padding_multiple=64,
+        n_layer=18,
+        n_head=16,
+        n_embd=1024,
+        rotary_percentage=1.0,
+        parallel_residual=False,
+        bias=False,
+        _norm_class="FusedRMSNorm",
+        norm_eps=1e-5,
+        _mlp_class="LLaMAMLP",
+        intermediate_size=3072,
+        n_query_groups=16,
+        down_or_up_sample_layer = [1, 2, 16, 17],
+        down_or_up_sample_ratio = [-4, -4, 4, 4],
+    ),
+    
+    dict(
+        org="StatNLP-research",
+        name="bytellama_700M_16384_HourGlass",
+        block_size=16384,
+        vocab_size=258,
+        padding_multiple=64,
+        n_layer=24,
+        n_head=16,
+        n_embd=1536,
+        rotary_percentage=1.0,
+        parallel_residual=False,
+        bias=False,
+        _norm_class="FusedRMSNorm",
+        norm_eps=1e-5,
+        _mlp_class="LLaMAMLP",
+        intermediate_size=4096,
+        n_query_groups=16,
+        down_or_up_sample_layer = [1, 2, 22, 23],
+        down_or_up_sample_ratio = [-4, -4, 4, 4],
+    ),
+    dict(
+        org="StatNLP-research",
+        name="bytellama_1b_16384_HourGlass",
+        block_size=16384,
+        vocab_size=258,
+        padding_multiple=64,
+        n_layer=22,
+        n_head=32,
+        n_embd=2048,
+        rotary_percentage=1.0,
+        parallel_residual=False,
+        bias=False,
+        _norm_class="FusedRMSNorm",
+        norm_eps=1e-5, #Llama 2 use 1e-5. Llama 1 use 1e-6
+        _mlp_class="LLaMAMLP",
+        intermediate_size=5632,
+        n_query_groups=4,
+        down_or_up_sample_layer = [1, 2, 20, 21],
+        down_or_up_sample_ratio = [-4, -4, 4, 4],
     ),
 ]
 configs.extend(tiny_LLaMA)

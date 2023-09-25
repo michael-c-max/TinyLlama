@@ -31,28 +31,38 @@ import numpy as np
 # learning_rate = 4e-4
 # micro_batch_size = 3
 # max_step = 15000
-# warmup_steps = 200
-# log_step_interval = 1
-# eval_iters = 100
-# save_step_interval = 5000
-# eval_step_interval = 5000
 
-model_name = "bytellama_16384"
-name = "bytellama_16384"
+
+
+# model_name = "bytellama_16384"
+# name = "bytellama_16384"
+# out_dir = Path("out") / name
+
+# # Hyperparameters
+# num_of_devices = 6
+# global_batch_size = 180
+# learning_rate = 4e-4
+# micro_batch_size = 2
+# max_step = 10000
+# warmup_steps = 200
+
+model_name = "bytellama_700M_16384_HourGlass"
+name = "bytellama_700M_16384_HourGlass"
 out_dir = Path("out") / name
 
 # Hyperparameters
-num_of_devices = 6
-global_batch_size = 180
+num_of_devices = 8
+global_batch_size = 256
 learning_rate = 4e-4
-micro_batch_size = 2
-max_step = 10000
+micro_batch_size = 4
+max_step = 50000
 warmup_steps = 200
+
+
 log_step_interval = 1
 eval_iters = 100
 save_step_interval = 5000
 eval_step_interval = 5000
-
 weight_decay = 1e-1
 beta1 = 0.9
 beta2 = 0.95
@@ -215,6 +225,14 @@ def train(fabric, state, train_dataloader, val_dataloader, monitor, resume):
         is_accumulating = (state["iter_num"] + 1) % gradient_accumulation_steps != 0
         with fabric.no_backward_sync(model, enabled=is_accumulating):
             logits = model(input_ids)
+            if model.config.down_or_up_sample_layer:
+                shift_length = 1
+                for up_or_down in model.config.down_or_up_sample_ratio:
+                    if up_or_down > 0:
+                        shift_length *= up_or_down
+                shift_length -= 1
+                logits = logits[:, :-shift_length].contiguous()
+                targets = targets[:, shift_length:].contiguous()
             loss = loss_func(logits, targets)
             # loss = chunked_cross_entropy(logits, targets, chunk_size=0)
             fabric.backward(loss / gradient_accumulation_steps)
@@ -279,6 +297,15 @@ def validate(fabric: L.Fabric, model: torch.nn.Module, val_dataloader: DataLoade
         input_ids = val_data[:, 0 : model.config.block_size].contiguous()
         targets = val_data[:, 1 : model.config.block_size + 1].contiguous()
         logits = model(input_ids)
+        
+        if model.config.down_or_up_sample_layer:
+                shift_length = 1
+                for up_or_down in model.config.down_or_up_sample_ratio:
+                    if up_or_down > 0:
+                        shift_length *= up_or_down
+                shift_length -= 1
+                logits = logits[:, :-shift_length].contiguous()
+                targets = targets[:, shift_length:].contiguous()
         loss = chunked_cross_entropy(logits, targets, chunk_size=0)
 
         # loss_func = FusedCrossEntropyLoss()
